@@ -157,6 +157,8 @@ class _DevicesPageState extends State<DevicesPage> {
   Color toggleColor = Colors.red;
   Color _currentColor = getRandomColor();
   Random _random = Random();
+  bool _isButtonLoading = false;
+  bool _isNewDeviceButtonLoading = false;
 
   // Change later
   final List<int> _graphData = [14, 54, 30, 65, 8, 12, 55];
@@ -204,7 +206,6 @@ class _DevicesPageState extends State<DevicesPage> {
   }*/
   @override
   Widget _buildDeviceCard(BuildContext context) {
-    bool isLoading = false;
     return Card(
       color: Colors.grey[900],
       child: Column(
@@ -213,13 +214,13 @@ class _DevicesPageState extends State<DevicesPage> {
             leading: Icon(Icons.lightbulb_outline, color: Colors.red),
             title: Text('Подстветка', style: TextStyle(color: secondColor)),
             subtitle: Text('Активно', style: TextStyle(color: Colors.grey)),
-            trailing: Switch(
+            /*trailing: Switch(
               value: true,
               activeColor: Colors.white,
               onChanged: (value) {
                 // Реализация управления
               },
-            ),
+            ),*/
           ),
           ExpansionTile(
             title: Text('Статистика', style: TextStyle(color: secondColor)),
@@ -265,6 +266,7 @@ class _DevicesPageState extends State<DevicesPage> {
                                 'Текущее значение:',
                                 style: TextStyle(
                                   color: secondColor,
+                                  fontWeight: FontWeight.w500,
                                   fontSize: 24,
                                 ),
                               ),
@@ -273,6 +275,7 @@ class _DevicesPageState extends State<DevicesPage> {
                                 '${_graphData.last}',
                                 style: TextStyle(
                                   color: secondColor,
+                                  fontWeight: FontWeight.w500,
                                   fontSize: 24,
                                 ),
                               ),
@@ -295,7 +298,10 @@ class _DevicesPageState extends State<DevicesPage> {
                             'Выберите цвет:',
                             style: TextStyle(color: secondColor, fontSize: 20),
                           ),
+                          SizedBox(height: 10),
                           ColorPicker(
+                            enableAlpha: false,
+
                             pickerColor: _currentColor,
                             onColorChanged: (color) {
                               setState(() {
@@ -303,7 +309,7 @@ class _DevicesPageState extends State<DevicesPage> {
                               });
                             },
                             labelTextStyle: TextStyle(color: Colors.white),
-                            showLabel: true,
+                            showLabel: false,
                             pickerAreaHeightPercent: 0.8,
                           ),
                         ],
@@ -313,7 +319,7 @@ class _DevicesPageState extends State<DevicesPage> {
                     AnimatedSwitcher(
                       duration: Duration(milliseconds: 300),
                       child:
-                          _isLoading
+                          _isButtonLoading
                               ? Padding(
                                 padding: EdgeInsets.symmetric(vertical: 14),
                                 child: CircularProgressIndicator(
@@ -323,12 +329,12 @@ class _DevicesPageState extends State<DevicesPage> {
                               )
                               : ElevatedButton(
                                 onPressed: () async {
-                                  setState(() => _isLoading = true);
+                                  setState(() => _isButtonLoading = true);
                                   try {
-                                    await _PostDeviceData;
+                                    await _PostDeviceData();
                                   } finally {
                                     if (mounted) {
-                                      setState(() => _isLoading = false);
+                                      setState(() => _isButtonLoading = false);
                                     }
                                   }
                                 },
@@ -359,23 +365,78 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
-  void _PostDeviceData() async {}
+  Future<void> _PostDeviceData() async {}
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: mainColor,
-      child:
-          _isLoading
-              ? Center(child: CircularProgressIndicator(color: Colors.red))
-              : RefreshIndicator(
-                onRefresh: _fetchDevices,
-                child: ListView.builder(
-                  padding: EdgeInsets.all(16),
-                  itemCount: _devices.length,
-                  itemBuilder: (ctx, i) => _buildDeviceCard(context),
+    return Scaffold(
+      body: Container(
+        color: mainColor,
+        child:
+            _isLoading
+                ? Center(child: CircularProgressIndicator(color: Colors.red))
+                : RefreshIndicator(
+                  onRefresh: _fetchDevices,
+                  child: ListView.builder(
+                    padding: EdgeInsets.all(16),
+                    itemCount: _devices.length,
+                    itemBuilder: (ctx, i) => _buildDeviceCard(context),
+                  ),
                 ),
+      ),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          setState(() => _isLoading = true);
+          try {
+            await _getNewDevices();
+          } finally {
+            if (mounted) {
+              setState(() => _isLoading = false);
+            }
+          }
+        },
+        backgroundColor: Colors.red,
+        shape: CircleBorder(),
+        child: AnimatedSwitcher(
+          duration: Duration(milliseconds: 300),
+          child:
+              _isLoading
+                  ? Transform.rotate(
+                    angle: _isLoading ? 0 : 2 * pi,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                    ),
+                  )
+                  : Icon(Icons.add, size: 36),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _getNewDevices() async {
+    await Future.delayed(Duration(milliseconds: 1500));
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: Colors.grey[800],
+            title: Text(
+              'Устройства не найдены',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: Text(
+              'Свободных устройств вокруг не найдено',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+            actions: [
+              TextButton(
+                child: Text('OK'),
+                onPressed: () => Navigator.of(ctx).pop(),
               ),
+            ],
+          ),
     );
   }
 }
