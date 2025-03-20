@@ -153,6 +153,7 @@ Color getRandomColor() {
 
 class _DevicesPageState extends State<DevicesPage> {
   List<Map<String, dynamic>> _devices = [];
+  List<int> _list = [];
   bool _isLoading = true;
   Color toggleColor = Colors.red;
   Color _currentColor = getRandomColor();
@@ -331,7 +332,14 @@ class _DevicesPageState extends State<DevicesPage> {
                                 onPressed: () async {
                                   setState(() => _isButtonLoading = true);
                                   try {
-                                    await _PostDeviceData();
+                                    await _PostDeviceData(
+                                      _devices[0]['device_id'].toString(),
+                                      int.parse(
+                                        colorToHex(_currentColor).substring(2),
+                                        radix: 16,
+                                      ),
+                                    );
+                                    print(colorToHex(_currentColor));
                                   } finally {
                                     if (mounted) {
                                       setState(() => _isButtonLoading = false);
@@ -365,7 +373,46 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
-  Future<void> _PostDeviceData() async {}
+  Future<void> _PostDeviceData(String deviceId, int colorValue) async {
+    final colorData = {'device_id': deviceId, 'rgb': colorValue};
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://mtcspacehackathon.pythonanywhere.com/set_device_color',
+        ),
+        body: jsonEncode(colorData),
+        headers: {'Content-Type': 'application/json'},
+      );
+      if (response.statusCode == 200) {
+        _showErrorDialog('Состояние изменено', 'Изменено');
+      } else {
+        _showErrorDialog('Не удалось отправить запрос', 'Запрос не отправлен');
+      }
+    } catch (e) {
+      _showErrorDialog('Технические неполадки', 'Что-то пошло не так');
+    }
+  }
+
+  void _showErrorDialog(String message, String mainMessage) {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: Colors.grey[800],
+            title: Text(mainMessage, style: TextStyle(color: Colors.white)),
+            content: Text(
+              message,
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+            actions: [
+              TextButton(
+                child: Text('OK'),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ],
+          ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
